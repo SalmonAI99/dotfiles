@@ -1,0 +1,74 @@
+/* Tokyo Night — Hyprland / Wofi */
+
+window {
+    margin: 0;
+    padding: 0;
+
+    border: 2px solid #7aa2f7;
+    border-radius: 14px;
+
+    background-color: transparent;
+}
+
+/* Main container */
+#outer-box {
+    margin: 0;
+    padding: 10px;
+
+    border-radius: 12px;
+    background-color: #1a1b26;
+}
+
+/* Search bar */
+#input {
+    margin: 0 0 10px 0;
+    padding: 10px 14px;
+
+    border: 1px solid #292e42;
+    border-radius: 9px;
+
+    background-color: #24283b;
+    color: #c0caf5;
+
+    font-size: 16px;
+}
+
+/* Remove the default input outline */
+#input:focus {
+    border: 1px solid #7aa2f7;
+}
+
+/* App list */
+#inner-box {
+    margin: 0;
+    padding: 0;
+
+    background-color: transparent;
+}
+
+/* App entries */
+#entry {
+    margin: 2px 0;
+    padding: 8px 10px;
+
+    border-radius: 8px;
+
+    background-color: transparent;
+    color: #c0caf5;
+}
+
+/* Selected app */
+#entry:selected {
+    background-color: #33467c;
+    color: #7aa2f7;
+}
+
+/* Text */
+#text {
+    margin: 0;
+    color: #c0caf5;
+}
+
+#text:selected {
+    color: #7aa2f7;
+}
