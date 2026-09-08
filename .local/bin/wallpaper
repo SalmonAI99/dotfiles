@@ -1,0 +1,345 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────
+# mpvpaper YouTube Wallpaper Controller
+# ─────────────────────────────────────────────
+
+WALLPAPER_LIST="$HOME/.config/hypr/wallpapers.txt"
+STATE_FILE="$HOME/.cache/mpvpaper-wallpaper-index"
+SOCKET="/tmp/mpvpaper.sock"
+
+# ─────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────
+
+die() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+check_socket() {
+    [ -S "$SOCKET" ] || die "mpvpaper IPC socket not found: $SOCKET"
+}
+
+check_list() {
+    [ -f "$WALLPAPER_LIST" ] || die "Wallpaper list not found: $WALLPAPER_LIST"
+}
+
+# Get only non-empty, non-comment lines
+get_urls() {
+    grep -vE '^[[:space:]]*(#|$)' "$WALLPAPER_LIST"
+}
+
+get_count() {
+    get_urls | wc -l
+}
+
+get_current_index() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    else
+        echo 1
+    fi
+}
+
+set_current_index() {
+    mkdir -p "$(dirname "$STATE_FILE")"
+    echo "$1" > "$STATE_FILE"
+}
+
+get_url() {
+    local index="$1"
+    get_urls | sed -n "${index}p"
+}
+
+send_command() {
+    local command="$1"
+
+    printf '%s\n' "$command" | socat - "$SOCKET"
+}
+
+# ─────────────────────────────────────────────
+# Play a URL
+# ─────────────────────────────────────────────
+
+play_url() {
+    local url="$1"
+
+    [ -n "$url" ] || die "No URL found."
+
+    echo "Playing:"
+    echo "$url"
+
+    local json
+    json=$(printf '%s' "$url" | python -c '
+import json
+import sys
+
+url = sys.stdin.read()
+print(json.dumps({
+    "command": ["loadfile", url, "replace"]
+}))
+')
+    send_command "$json"
+}
+
+# ─────────────────────────────────────────────
+# Next
+# ─────────────────────────────────────────────
+
+next_wallpaper() {
+    check_socket
+    check_list
+
+    local count
+    count=$(get_count)
+
+    [ "$count" -gt 0 ] || die "Wallpaper list is empty."
+
+    local current
+    current=$(get_current_index)
+
+    local next=$((current + 1))
+
+    if [ "$next" -gt "$count" ]; then
+        next=1
+    fi
+
+    local url
+    url=$(get_url "$next")
+
+    set_current_index "$next"
+    play_url "$url"
+}
+# ─────────────────────────────────────────────
+# Begin
+# ─────────────────────────────────────────────
+
+
+begin_wallpaper() {
+    check_list
+
+    if pgrep -x mpvpaper >/dev/null; then
+        echo "mpvpaper is already running."
+        return 0
+    fi
+
+    rm -f "$SOCKET"
+
+    local url
+    url=$(get_url 1)
+
+    [ -n "$url" ] || die "No wallpaper URL found."
+
+    set_current_index 1
+
+    /usr/local/bin/mpvpaper \
+        -o "input-ipc-server=$SOCKET --loop-file=inf --script-opts=ytdl_hook-ytdl_path=/home/thomas/.local/bin/yt-dlp" \
+        eDP-1 \
+        "$url" \
+        >"$HOME/.cache/mpvpaper.log" 2>&1 &
+}
+
+
+close_wallpaper() {
+    if pgrep -x mpvpaper >/dev/null; then
+        pkill -9 -x mpvpaper
+        sleep 0.2
+    fi
+
+    rm -f "$SOCKET"
+    echo "Wallpaper closed."
+}
+
+# ─────────────────────────────────────────────
+# Previous
+# ─────────────────────────────────────────────
+
+previous_wallpaper() {
+    check_socket
+    check_list
+
+    local count
+    count=$(get_count)
+
+    [ "$count" -gt 0 ] || die "Wallpaper list is empty."
+
+    local current
+    current=$(get_current_index)
+
+    local previous=$((current - 1))
+
+    if [ "$previous" -lt 1 ]; then
+        previous="$count"
+    fi
+
+    local url
+    url=$(get_url "$previous")
+
+    set_current_index "$previous"
+    play_url "$url"
+}
+
+# ─────────────────────────────────────────────
+# Random
+# ─────────────────────────────────────────────
+
+random_wallpaper() {
+    check_socket
+    check_list
+
+    local count
+    count=$(get_count)
+
+    [ "$count" -gt 0 ] || die "Wallpaper list is empty."
+
+    local current
+    current=$(get_current_index)
+
+    local random
+
+    # Avoid selecting the current wallpaper when there is >1
+    if [ "$count" -gt 1 ]; then
+        while true; do
+            random=$(shuf -i 1-"$count" -n 1)
+
+            [ "$random" -ne "$current" ] && break
+        done
+    else
+        random=1
+    fi
+
+    local url
+    url=$(get_url "$random")
+
+    set_current_index "$random"
+    play_url "$url"
+}
+
+# ─────────────────────────────────────────────
+# Pause
+# ─────────────────────────────────────────────
+
+pause_wallpaper() {
+    check_socket
+
+    send_command '{
+        "command": ["set_property", "pause", true]
+    }'
+}
+
+# ─────────────────────────────────────────────
+# Resume
+# ─────────────────────────────────────────────
+
+resume_wallpaper() {
+    check_socket
+
+    send_command '{
+        "command": ["set_property", "pause", false]
+    }'
+}
+
+# ─────────────────────────────────────────────
+# Toggle
+# ─────────────────────────────────────────────
+
+toggle_wallpaper() {
+    check_socket
+
+    send_command '{
+        "command": ["cycle", "pause"]
+    }'
+}
+
+# ─────────────────────────────────────────────
+# Current
+# ─────────────────────────────────────────────
+
+current_wallpaper() {
+    check_list
+
+    local count
+    count=$(get_count)
+
+    local current
+    current=$(get_current_index)
+
+    local url
+    url=$(get_url "$current")
+
+    echo "Wallpaper $current/$count"
+    echo "$url"
+}
+
+# ─────────────────────────────────────────────
+# Help
+# ─────────────────────────────────────────────
+
+usage() {
+    cat <<EOF
+Usage: wallpaper <command>
+
+Commands:
+    next        Play next wallpaper
+    previous    Play previous wallpaper
+    prev        Alias for previous
+    random      Play a random wallpaper
+    pause       Pause wallpaper
+    resume      Resume wallpaper
+    toggle      Toggle pause/resume
+    current     Show current wallpaper
+    help        Show this help
+EOF
+}
+
+# ─────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────
+
+case "$1" in
+    next)
+        next_wallpaper
+        ;;
+
+    previous|prev)
+        previous_wallpaper
+        ;;
+
+    random)
+        random_wallpaper
+        ;;
+
+    pause)
+        pause_wallpaper
+        ;;
+
+    resume)
+        resume_wallpaper
+        ;;
+
+    toggle)
+        toggle_wallpaper
+        ;;
+
+    current)
+        current_wallpaper
+        ;;
+    begin)
+        begin_wallpaper
+        ;;
+    close)
+        close_wallpaper
+        ;;
+
+    help|-h|--help|"")
+        usage
+        ;;
+
+    *)
+        echo "Unknown command: $1"
+        echo
+        usage
+        exit 1
+        ;;
+esac
