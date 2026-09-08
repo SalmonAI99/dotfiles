@@ -53,6 +53,7 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd(terminal)
   -- hl.exec_cmd("nm-applet")
   hl.exec_cmd("hyprpaper")
+  -- hl.exec_cmd("mpvpaper")
 end)
 
 
@@ -116,7 +117,7 @@ hl.config({
         rounding_power = 2,
 
         -- Change transparency of focused and unfocused windows
-        active_opacity   = 1.0,
+        active_opacity   = 0.9,
         inactive_opacity = 1.0,
 
         shadow = {
@@ -262,6 +263,7 @@ hl.device({
 ---------------------
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
+local superShift = "SUPER + SHIFT" -- Sets "Windows" key as main modifier
 
 -- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
 hl.bind(mainMod .. " + return", hl.dsp.exec_cmd(terminal))
@@ -271,7 +273,7 @@ hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + space", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
+-- hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + T", hl.dsp.layout("togglesplit"))    -- dwindle only
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "maximized"}))
 hl.bind("CTRL + SHIFT + S", hl.dsp.exec_cmd("hyprshot -m region"))
@@ -293,6 +295,7 @@ end
 -- Example special workspace (scratchpad)
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+
 
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
@@ -319,7 +322,15 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
-
+-- hyprwave
+hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("hyprwave"))
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("hyprwave-toggle play"))
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("hyprwave-toggle pause"))
+hl.bind(mainMod .. " + PERIOD", hl.dsp.exec_cmd("~/.local/bin/wallpaper next"))
+hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd("~/.local/bin/wallpaper previous"))
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.local/bin/wallpaper begin"))
+-- hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("kitty --hold /home/thomas/.local/bin/wallpaper begin"))
+hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("~/.local/bin/wallpaper close"))
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
 --------------------------------
