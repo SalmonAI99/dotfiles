@@ -116,7 +116,7 @@ hl.config({
         rounding_power = 2,
 
         -- Change transparency of focused and unfocused windows
-        active_opacity   = 1.0,
+        active_opacity   = 0.9,
         inactive_opacity = 1.0,
 
         shadow = {
@@ -370,7 +370,7 @@ hl.window_rule({
     float = true,
 })
 
-hl.window_rule({
-    match = { class = "md\\.obsidian\\.Obsidian" },
-    opacity = "0.80 override 0.80 override",
-})
+-- hl.window_rule({
+--     match = { class = "md\\.obsidian\\.Obsidian" },
+--     opacity = "0.80 override 0.80 override",
+-- })
